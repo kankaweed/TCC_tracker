@@ -22,11 +22,13 @@
  * 
 */
 
-//#define HALLPIN 3
-//int hall,turns;
-//float perimeter = 31.41, minuteInHour = 1667, vel = 0;
-
+/*
+ * Motor
+ * https://www.arduino.cc/en/Tutorial/LibraryExamples/StepperOneRevolution
+ * 
+*/
 #include <dht11.h>
+#include <Stepper.h>
 
 #define DHT11PIN 4
 #define AMOSTRAS 12
@@ -39,15 +41,18 @@ float aRef = 5;
 // Relação calculada para o divisor de tensão
 float relation = 12;
 
-int sensitivity = 66;
-int adcValue= 0;
-int offsetVoltage = 2500;
+int sensitivity = 66, adcValue= 0, offsetVoltage = 2500;
+
+const int stepsPerRevolution = 200;
   
 volatile byte state = LOW;
 
 dht11 DHT11;
 
+Stepper myStepper(stepsPerRevolution, 8, 9, 10, 11);
+
 void setup(){
+  myStepper.setSpeed(60);
   Serial.begin(9600);  
 }
 
@@ -117,4 +122,13 @@ float reandCurrentSensor(uint8_t ioPin) {
   adcVoltage = (adcValue / 1024.0) * 5000;
   
   return ((adcVoltage - offsetVoltage) / sensitivity);
+}
+
+void turnMotor(int value) {
+  if(value >= 0){
+    myStepper.step(stepsPerRevolution);
+  } else {
+    myStepper.step(-stepsPerRevolution);
+  }
+  
 }
