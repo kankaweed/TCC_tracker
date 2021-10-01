@@ -31,7 +31,7 @@
 #define DHT11PIN 4
 #define AMOSTRAS 12
 
-float humidity, temperature, voltageTracker, voltageFixed, voltageMotor ;
+float humidity, temperature, voltageTracker, voltageFixed, voltageMotor, currentTracker, currentFixed, currentMotor;
 
 // valor máximo de tensão na entrada do arduino
 float aRef = 5;
@@ -39,43 +39,49 @@ float aRef = 5;
 // Relação calculada para o divisor de tensão
 float relation = 12;
 
+int sensitivity = 66;
+int adcValue= 0;
+int offsetVoltage = 2500;
+  
 volatile byte state = LOW;
 
 dht11 DHT11;
 
-
-const int currentPin = A3;
-int sensitivity = 66;
-int adcValue= 0;
-int offsetVoltage = 2500;
-double adcVoltage = 0;
-double currentValue = 0;
-
 void setup(){
-  Serial.begin(9600);
-  //pinMode(HALLPIN, INPUT);
-  //attachInterrupt(digitalPinToInterrupt(HALLPIN), addTurn, LOW);
-  
+  Serial.begin(9600);  
 }
 
 void loop(){
-  reandCurrentSensor();
+  readSensors();
   
-  //readSensors();
+  voltageTracker = (readTrackerVoltage(A0) * aRef) / 1024.0;
+  voltageFixed = (readTrackerVoltage(A1) * aRef) / 1024.0;
+  voltageMotor = (readTrackerVoltage(A2) * aRef) / 1024.0;
 
-  //voltageTracker = (readTrackerVoltage(A0) * aRef) / 1024.0;
-  //voltageFixed = (readTrackerVoltage(A1) * aRef) / 1024.0;
-  //voltageMotor = (readTrackerVoltage(A2) * aRef) / 1024.0;
+  currentTracker = reandCurrentSensor(A3);
+  currentFixed = reandCurrentSensor(A4);
+  currentMotor = reandCurrentSensor(A5);
 
-  //Serial.print("Tensão: ");
-  //Serial.print(voltageTracker * relation);
-  //Serial.println("V");
-  //vel = calcWindVelocity(200);
-  //Serial.print("turns: ");
-  //Serial.println(state);
-  //hall = digitalRead(HALLPIN);
-  //Serial.print("HALLPIN: ");
-  //Serial.println(hall);
+  Serial.print("Tensão tracker: ");
+  Serial.print(voltageTracker * relation);
+  Serial.println("V");
+  Serial.print("Tensão fixo: ");
+  Serial.print(voltageFixed * relation);
+  Serial.println("V");
+  Serial.print("Tensão motor: ");
+  Serial.print(voltageMotor * relation);
+  Serial.println("V");
+
+  Serial.print("Corrente tracker: ");
+  Serial.print(currentTracker);
+  Serial.println("A");
+  Serial.print("Corrente fixed: ");
+  Serial.print(currentFixed);
+  Serial.println("A");
+  Serial.print("Corrente motor: ");
+  Serial.print(currentMotor);
+  Serial.println("A");
+ 
   Serial.println();
   delay(2000);
 }
@@ -86,8 +92,6 @@ void readSensors(){
   humidity = DHT11.humidity;
   temperature = DHT11.temperature;
   
-  
-//  Serial.println(hall);
   Serial.print("Umidade: ");
   Serial.print(humidity, 2);
   Serial.println(" %");
@@ -106,22 +110,11 @@ float readTrackerVoltage(uint8_t ioPin) {
   return total / (float)AMOSTRAS;
 }
 
-void reandCurrentSensor() {
-  adcValue = analogRead(currentPin);
+float reandCurrentSensor(uint8_t ioPin) {
+  double adcVoltage = 0;
+  
+  adcValue = analogRead(ioPin);
   adcVoltage = (adcValue / 1024.0) * 5000;
-  currentValue = ((adcVoltage - offsetVoltage) / sensitivity);
-  Serial.print("Corrente: ");
-  Serial.println(currentValue);
   
+  return ((adcVoltage - offsetVoltage) / sensitivity);
 }
-
-/*void addTurn() {
-  state = !state;
-}
-
-float calcWindVelocity(int receivedTurns) {
-  float rpm = receivedTurns * perimeter;
-  float calculatedVelocity = rpm / minuteInHour;
-  
-  return calculatedVelocity;
-}*/
