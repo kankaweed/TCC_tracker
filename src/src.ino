@@ -24,14 +24,22 @@
 
 /*
  * Motor
- * https://www.arduino.cc/en/Tutorial/LibraryExamples/StepperOneRevolution
+ * https://www.robocore.net/tutoriais/controlando-motor-de-passo
  * 
 */
+
+/*
+ * RTC
+ * https://www.filipeflop.com/blog/relogio-rtc-ds1307-arduino/
+ * https://github.com/filipeflop/DS1307
+*/
 #include <dht11.h>
-#include <Stepper.h>
+#include <DS1307.h>
 
 #define DHT11PIN 4
 #define AMOSTRAS 12
+
+DS1307 rtc(5, 6);
 
 float humidity, temperature, voltageTracker, voltageFixed, voltageMotor, currentTracker, currentFixed, currentMotor;
 
@@ -43,29 +51,73 @@ float relation = 12;
 
 int sensitivity = 66, adcValue= 0, offsetVoltage = 2500;
 
-const int stepsPerRevolution = 200;
-  
-volatile byte state = LOW;
+const int revolution15Degress = 200; // Trocar valor para baseado na implementação
+const int revolution20Degress = 200; // Trocar valor para baseado na implementação
+const int revolution30Degress = 200; // Trocar valor para baseado na implementação
+const int revolution50Degress = 200; // Trocar valor para baseado na implementação
+const int revolutionBack = 10000000;
+
+const int stepPin = 7;
+const int dirPin = 8;
+
+const int limitSwitch1 = 2;
+const int limitSwitch2 = 3;
+
+boolean safetyStop = false;
 
 dht11 DHT11;
 
-Stepper myStepper(stepsPerRevolution, 8, 9, 10, 11);
-
 void setup(){
-  myStepper.setSpeed(60);
+  rtc.halt(false);
+  
+  //Deve ser colocado no código para a primeira ativação do RTC, então comnetado e recarregado
+  rtc.setDOW(SATURDAY);      //Define o dia da semana
+  rtc.setTime(15, 16, 0);     //Define o horario
+  rtc.setDate(02, 10, 2021);   //Define o dia, mes e ano
+
+  rtc.setSQWRate(SQW_RATE_1);
+  rtc.enableSQW(true);
+  
+  pinMode(limitSwitch1, INPUT_PULLUP);
+  pinMode(limitSwitch2, INPUT_PULLUP);
+  
+  attachInterrupt(digitalPinToInterrupt(limitSwitch1), stopMotor, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(limitSwitch2), stopMotor, CHANGE);
+
+  pinMode ( stepPin, OUTPUT ) ;
+  pinMode ( dirPin, OUTPUT ) ;
   Serial.begin(9600);  
 }
 
 void loop(){
   readSensors();
-  
-  voltageTracker = (readTrackerVoltage(A0) * aRef) / 1024.0;
-  voltageFixed = (readTrackerVoltage(A1) * aRef) / 1024.0;
-  voltageMotor = (readTrackerVoltage(A2) * aRef) / 1024.0;
 
-  currentTracker = reandCurrentSensor(A3);
-  currentFixed = reandCurrentSensor(A4);
-  currentMotor = reandCurrentSensor(A5);
+  voltageTracker = (readVoltage(A0) * aRef) / 1024.0;
+  voltageFixed = (readVoltage(A1) * aRef) / 1024.0;
+  voltageMotor = (readVoltage(A2) * aRef) / 1024.0;
+
+  currentTracker = readCurrentSensor(A3);
+  currentFixed = readCurrentSensor(A4);
+  currentMotor = readCurrentSensor(A5);
+  
+  if(rtc.getTimeStr(FORMAT_SHORT) == "08:30"){
+    turnMotor(revolution15Degress, HIGH);
+  }
+   if(rtc.getTimeStr(FORMAT_SHORT) == "10:00"){
+    turnMotor(revolution15Degress, HIGH);
+  }
+   if(rtc.getTimeStr(FORMAT_SHORT) == "11:30"){
+    turnMotor(revolution20Degress, HIGH);
+  }
+   if(rtc.getTimeStr(FORMAT_SHORT) == "13:00"){
+    turnMotor(revolution50Degress, HIGH);
+  }
+   if(rtc.getTimeStr(FORMAT_SHORT) == "14:30"){
+    turnMotor(revolution30Degress, HIGH);
+  }
+   if(rtc.getTimeStr(FORMAT_SHORT) == "08:30"){
+    turnMotor(revolutionBack, LOW);
+  }
 
   Serial.print("Tensão tracker: ");
   Serial.print(voltageTracker * relation);
@@ -106,7 +158,7 @@ void readSensors(){
   Serial.println(" ºC");
 }
 
-float readTrackerVoltage(uint8_t ioPin) {
+float readVoltage(uint8_t ioPin) {
   float total = 0;
   for(int i = 0; i < AMOSTRAS; i++) {
     total += 1.0 * analogRead(ioPin);
@@ -115,7 +167,7 @@ float readTrackerVoltage(uint8_t ioPin) {
   return total / (float)AMOSTRAS;
 }
 
-float reandCurrentSensor(uint8_t ioPin) {
+float readCurrentSensor(uint8_t ioPin) {
   double adcVoltage = 0;
   
   adcValue = analogRead(ioPin);
@@ -124,11 +176,22 @@ float reandCurrentSensor(uint8_t ioPin) {
   return ((adcVoltage - offsetVoltage) / sensitivity);
 }
 
-void turnMotor(int value) {
-  if(value >= 0){
-    myStepper.step(stepsPerRevolution);
-  } else {
-    myStepper.step(-stepsPerRevolution);
-  }
-  
+void turnMotor(int motorStep, volatile byte dir ) {
+  digitalWrite(dirPin, dir);
+
+   for(int x = 0; x < motorStep; x++) {
+    if(safetyStop){
+      safetyStop = false;
+      break;
+    }
+        digitalWrite(stepPin, HIGH); 
+        delayMicroseconds(500); 
+        digitalWrite(stepPin, LOW); 
+        delayMicroseconds(500); 
+    }
+   digitalWrite(dirPin,!dir); 
+}
+
+void stopMotor() {
+  safetyStop = true;
 }

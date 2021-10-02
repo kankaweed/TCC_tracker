@@ -1,5 +1,19 @@
 # TCC_tracker
 
+## Pinos utilizados
+- DHT11 = pino digital 4
+- Sensor de tensão tracker = pino analogico A0 
+- Sensor de tensão fixo = pino analogico A1
+- Sensor de tensão motor = pino analogico A2
+- Sensor de corrente tracker = pino analogico A3
+- Sensor de corrente fixo = pino analogico A4
+- Sensor de corrente motor = pino analogico A5
+- Fim de curso 1 = pino digital 2
+- Fim de curso 2 = pino digital 3
+- RTC SDA = pino digital 5
+- RTC SLC = pino digital 6
+- Motor step = pino digital 7
+- Motor dir = pino digital 8
 ## DHT11
 ---
 - Foi utilizado a biblioteca dht11 para facilitar a leitura da umidade e temperatura;
@@ -42,3 +56,13 @@
 - Sensor de tensão: https://br-arduino.org/2015/06/voltimetro-com-arduino-como-montar-programar-e-calibrar.html
 
 - Sensor de corrente: https://www.electronicshub.org/interfacing-acs712-current-sensor-with-arduino/
+
+## Motor
+- Será conectado aos pinos 7 e 8
+- É preciso testar para ver quantos pulsos será preciso para cada angulo, Os valores dos pulsos deverão ser colocados nas váriaveis:
+````
+const int revolution15Degress = 100 // valores de exemplo
+const int revolution20Degress = 150
+const int revolution30Degress = 200
+const int revolution50Degress = 300
+````
