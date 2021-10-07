@@ -32,11 +32,20 @@
  * RTC
  * https://www.filipeflop.com/blog/relogio-rtc-ds1307-arduino/
  * https://github.com/filipeflop/DS1307
+ * 
+*/
+
+/*
+ * CSV File
+ * https://scholarslab.lib.virginia.edu/blog/saving-arduino-sensor-data/
+ * 
 */
 #include <dht11.h>
 #include <DS1307.h>
+#include <SPI.h>
+#include <SD.h>
 
-#define DHT11PIN 4
+#define DHT11PIN 9
 #define AMOSTRAS 12
 
 DS1307 rtc(5, 6);
@@ -65,9 +74,35 @@ const int limitSwitch2 = 3;
 
 boolean safetyStop = false;
 
+const int sdPin = 4;
+
+File dataFile;
+
 dht11 DHT11;
 
 void setup(){
+  Serial.begin(9600);  
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
+  Serial.print("Inicializando o cartão SD...");
+  if(!SD.begin(sdPin)) {
+    Serial.println("Falha na inicialização!");
+    return;
+  }
+  Serial.println("Inicialização feita com sucesso!.");
+  
+  dataFile = SD.open("data.csv", FILE_WRITE);
+  
+  if (dataFile) {
+    dataFile.println("hora,umidade,temperature,tensao_tracker,tensao_fixo,tensao_motor,corrente_tracker,corrente_fixed,corrente_motor");
+    dataFile.close();
+    Serial.println("Arquivo aberto com sucesso");
+  } else {
+    Serial.println("Falha ao abrir o arquivo");
+  }
+  
   rtc.halt(false);
   
   //Deve ser colocado no código para a primeira ativação do RTC, então comnetado e recarregado
@@ -86,15 +121,15 @@ void setup(){
 
   pinMode ( stepPin, OUTPUT ) ;
   pinMode ( dirPin, OUTPUT ) ;
-  Serial.begin(9600);  
+  
 }
 
 void loop(){
   readSensors();
 
-  voltageTracker = (readVoltage(A0) * aRef) / 1024.0;
-  voltageFixed = (readVoltage(A1) * aRef) / 1024.0;
-  voltageMotor = (readVoltage(A2) * aRef) / 1024.0;
+  voltageTracker = readVoltage(A0);
+  voltageFixed = readVoltage(A1);
+  voltageMotor = readVoltage(A2);
 
   currentTracker = readCurrentSensor(A3);
   currentFixed = readCurrentSensor(A4);
@@ -120,13 +155,13 @@ void loop(){
   }
 
   Serial.print("Tensão tracker: ");
-  Serial.print(voltageTracker * relation);
+  Serial.print(voltageTracker);
   Serial.println("V");
   Serial.print("Tensão fixo: ");
-  Serial.print(voltageFixed * relation);
+  Serial.print(voltageFixed);
   Serial.println("V");
   Serial.print("Tensão motor: ");
-  Serial.print(voltageMotor * relation);
+  Serial.print(voltageMotor);
   Serial.println("V");
 
   Serial.print("Corrente tracker: ");
@@ -138,9 +173,10 @@ void loop(){
   Serial.print("Corrente motor: ");
   Serial.print(currentMotor);
   Serial.println("A");
- 
+
+  saveDataToFile();
   Serial.println();
-  delay(2000);
+  delay(5000);
 }
 
 void readSensors(){
@@ -159,12 +195,14 @@ void readSensors(){
 }
 
 float readVoltage(uint8_t ioPin) {
-  float total = 0;
+  float total = 0, calc;
   for(int i = 0; i < AMOSTRAS; i++) {
     total += 1.0 * analogRead(ioPin);
     delay(5);
   }
-  return total / (float)AMOSTRAS;
+  calc = (total / (float)AMOSTRAS) * relation;
+
+  return (calc * aRef) / 1024.0;
 }
 
 float readCurrentSensor(uint8_t ioPin) {
@@ -194,4 +232,21 @@ void turnMotor(int motorStep, volatile byte dir ) {
 
 void stopMotor() {
   safetyStop = true;
+}
+
+void saveDataToFile(){
+  dataFile = SD.open("data.csv", FILE_WRITE);
+  //dataFile.print("umidade,temperature,tensao_tracker,tensao_fixo,tensao_motor,corrente_tracker,corrente_fixed,corrente_motor");
+  //voltageTracker, voltageFixed, voltageMotor, currentTracker, currentFixed, currentMotor
+  dataFile.println( String(rtc.getTimeStr()) + "," +
+                    String(humidity) + "," + 
+                    String(temperature) + "," + 
+                    String(voltageTracker) + "," +
+                    String(voltageFixed) + "," + 
+                    String(voltageMotor) + "," + 
+                    String(currentTracker) + "," + 
+                    String(currentFixed) + "," +
+                    String(currentMotor)
+                  );
+  dataFile.close();
 }

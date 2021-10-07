@@ -1,7 +1,7 @@
 # TCC_tracker
 
 ## Pinos utilizados
-- DHT11 = pino digital 4
+- DHT11 = pino digital 9
 - Sensor de tensão tracker = pino analogico A0 
 - Sensor de tensão fixo = pino analogico A1
 - Sensor de tensão motor = pino analogico A2
@@ -17,7 +17,7 @@
 ## DHT11
 ---
 - Foi utilizado a biblioteca dht11 para facilitar a leitura da umidade e temperatura;
-- O sensor dht11 está sendo lido no pino **digital** 4;
+- O sensor dht11 está sendo lido no pino **digital** 9;
 - A leitura do sensor está dentro da função **readSensors()** que está sendo chamada dentro do loop;
 ### Esquemático
 ![Esquemático DHT11](./images/esquematico_dht11.png )
@@ -58,7 +58,7 @@
 - Sensor de corrente: https://www.electronicshub.org/interfacing-acs712-current-sensor-with-arduino/
 
 ## Motor
-- Será conectado aos pinos 7 e 8
+- Será conectado aos pinos **digitais** 7 e 8
 - É preciso testar para ver quantos pulsos será preciso para cada angulo, Os valores dos pulsos deverão ser colocados nas váriaveis:
 ````
 const int revolution15Degress = 100 // valores de exemplo
@@ -66,3 +66,7 @@ const int revolution20Degress = 150
 const int revolution30Degress = 200
 const int revolution50Degress = 300
 ````
+
+## Armazenamento de dados
+- Foi utilizado o cartão SD para o armazenamento de dados
+- Foi utilizado o pino **digital** 4
