@@ -2,16 +2,16 @@
 
 ## Pinos utilizados
 - DHT11 = pino digital 9
-- Sensor de tensão tracker = pino analogico A0 
-- Sensor de tensão fixo = pino analogico A1
-- Sensor de tensão motor = pino analogico A2
+- Sensor de tensão tracker = pino analogico A8 
+- Sensor de tensão fixo = pino analogico A9
+- Sensor de tensão motor = pino analogico A10
 - Sensor de corrente tracker = pino analogico A3
 - Sensor de corrente fixo = pino analogico A4
 - Sensor de corrente motor = pino analogico A5
 - Fim de curso 1 = pino digital 2
 - Fim de curso 2 = pino digital 3
-- RTC SDA = pino digital 5
-- RTC SLC = pino digital 6
+- RTC SDA = pino digital 20
+- RTC SLC = pino digital 21
 - Motor step = pino digital 7
 - Motor dir = pino digital 8
 ## DHT11
@@ -29,9 +29,9 @@
 - Foi utilizado um divisor de tensão que permite ler uma tensão de até 60V;
 - Para esse circuito foram utilizados um resistor de 220KΩ (R1) e um resistor de 20KΩ (R2);
 - Os sensores de tensão estão conectados nas entradas:
-    - A0: Tracker;
-    - A1: Fixo;
-    - A2: Motor;
+    - A8: Tracker;
+    - A9: Fixo;
+    - A10: Motor;
 - O valor da tensão é calculado pela função **readVoltage**
 ### Esquemático
 
@@ -70,3 +70,15 @@ const int revolution50Degress = 300
 ## Armazenamento de dados
 - Foi utilizado o cartão SD para o armazenamento de dados
 - Foi utilizado o pino **digital** 4
+
+## RTC
+- Exclui a implementação utilizando a biblioteca de RTC
+- fiz uma nova implementação utilizando a biblioteca **Wire**  e tratando o valor recebido do RTC com comunicação I2C
+
+# Referências
+
+- dht11: https://create.arduino.cc/projecthub/arcaegecengiz/using-dht11-b0f365
+
+- Sensor de tensão: https://br-arduino.org/2015/06/voltimetro-com-arduino-como-montar-programar-e-calibrar.html
+
+- Sensor de corrente: https://www.electronicshub.org/interfacing-acs712-current-sensor-with-arduino/

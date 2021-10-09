@@ -41,14 +41,18 @@
  * 
 */
 #include <dht11.h>
-#include <DS1307.h>
+#include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 
 #define DHT11PIN 9
 #define AMOSTRAS 12
+#define TTracker A8
+#define TFixo A9
+#define TMotor A10
+#define DS1307_ADDRESS 0x68
 
-DS1307 rtc(5, 6);
+byte zero = 0x00; //workaround for issue #527
 
 float humidity, temperature, voltageTracker, voltageFixed, voltageMotor, currentTracker, currentFixed, currentMotor;
 
@@ -82,78 +86,74 @@ dht11 DHT11;
 
 void setup(){
   Serial.begin(9600);  
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
 
   Serial.print("Inicializando o cartão SD...");
   if(!SD.begin(sdPin)) {
     Serial.println("Falha na inicialização!");
-    return;
   }
   Serial.println("Inicialização feita com sucesso!.");
   
   dataFile = SD.open("data.csv", FILE_WRITE);
   
   if (dataFile) {
-    dataFile.println("hora,umidade,temperature,tensao_tracker,tensao_fixo,tensao_motor,corrente_tracker,corrente_fixed,corrente_motor");
+    dataFile.println("hora,umidade,temperatura,tensao_tracker,tensao_fixo,tensao_motor,corrente_tracker,corrente_fixed,corrente_motor");
     dataFile.close();
     Serial.println("Arquivo aberto com sucesso");
   } else {
     Serial.println("Falha ao abrir o arquivo");
   }
-  
-  rtc.halt(false);
-  
-  //Deve ser colocado no código para a primeira ativação do RTC, então comnetado e recarregado
-  rtc.setDOW(SATURDAY);      //Define o dia da semana
-  rtc.setTime(15, 16, 0);     //Define o horario
-  rtc.setDate(02, 10, 2021);   //Define o dia, mes e ano
 
-  rtc.setSQWRate(SQW_RATE_1);
-  rtc.enableSQW(true);
-  
+  Wire.begin();
+ 
   pinMode(limitSwitch1, INPUT_PULLUP);
   pinMode(limitSwitch2, INPUT_PULLUP);
   
   attachInterrupt(digitalPinToInterrupt(limitSwitch1), stopMotor, CHANGE);
   attachInterrupt(digitalPinToInterrupt(limitSwitch2), stopMotor, CHANGE);
 
-  pinMode ( stepPin, OUTPUT ) ;
-  pinMode ( dirPin, OUTPUT ) ;
+  pinMode( stepPin, OUTPUT ) ;
+  pinMode( dirPin, OUTPUT ) ;
+  digitalWrite(stepPin, LOW);
   
+ //setDateTime();
 }
 
 void loop(){
+  String completeDate = returnCompleteDate();
   readSensors();
 
-  voltageTracker = readVoltage(A0);
-  voltageFixed = readVoltage(A1);
-  voltageMotor = readVoltage(A2);
+  voltageTracker = readVoltage(TTracker);
+  voltageFixed = readVoltage(TFixo);
+  voltageMotor = readVoltage(TMotor);
 
   currentTracker = readCurrentSensor(A3);
   currentFixed = readCurrentSensor(A4);
   currentMotor = readCurrentSensor(A5);
   
-  if(rtc.getTimeStr(FORMAT_SHORT) == "08:30"){
+ String hourAndMinute = returnHourAndMinute();
+ Serial.print("hora e minuto: ");
+ Serial.println(hourAndMinute);
+  if(returnHourAndMinute() == "14:7"){
     turnMotor(revolution15Degress, HIGH);
   }
-   if(rtc.getTimeStr(FORMAT_SHORT) == "10:00"){
+   if(returnHourAndMinute() == "10:00"){
     turnMotor(revolution15Degress, HIGH);
   }
-   if(rtc.getTimeStr(FORMAT_SHORT) == "11:30"){
+   if(returnHourAndMinute() == "11:30"){
     turnMotor(revolution20Degress, HIGH);
   }
-   if(rtc.getTimeStr(FORMAT_SHORT) == "13:00"){
+   if(returnHourAndMinute() == "13:00"){
     turnMotor(revolution50Degress, HIGH);
   }
-   if(rtc.getTimeStr(FORMAT_SHORT) == "14:30"){
+   if(returnHourAndMinute() == "14:30"){
     turnMotor(revolution30Degress, HIGH);
   }
-   if(rtc.getTimeStr(FORMAT_SHORT) == "08:30"){
+   if(returnHourAndMinute() == "16:30"){
     turnMotor(revolutionBack, LOW);
   }
-
+  
+  Serial.print("Data: ");
+  Serial.println(completeDate);
   Serial.print("Tensão tracker: ");
   Serial.print(voltageTracker);
   Serial.println("V");
@@ -176,6 +176,7 @@ void loop(){
 
   saveDataToFile();
   Serial.println();
+  // aumentar delay para medições quando for instalado
   delay(5000);
 }
 
@@ -228,6 +229,7 @@ void turnMotor(int motorStep, volatile byte dir ) {
         delayMicroseconds(500); 
     }
    digitalWrite(dirPin,!dir); 
+   digitalWrite(stepPin, LOW); 
 }
 
 void stopMotor() {
@@ -236,9 +238,8 @@ void stopMotor() {
 
 void saveDataToFile(){
   dataFile = SD.open("data.csv", FILE_WRITE);
-  //dataFile.print("umidade,temperature,tensao_tracker,tensao_fixo,tensao_motor,corrente_tracker,corrente_fixed,corrente_motor");
-  //voltageTracker, voltageFixed, voltageMotor, currentTracker, currentFixed, currentMotor
-  dataFile.println( String(rtc.getTimeStr()) + "," +
+  dataFile.println( 
+                    String(returnCompleteDate()) + "," +
                     String(humidity) + "," + 
                     String(temperature) + "," + 
                     String(voltageTracker) + "," +
@@ -249,4 +250,85 @@ void saveDataToFile(){
                     String(currentMotor)
                   );
   dataFile.close();
+}
+
+
+void setDateTime(){
+  byte second =      0; //0-59
+  byte minute =      05; //0-59
+  byte hour =        14; //0-23
+  byte weekDay =     7; //1-7
+  byte monthDay =    9; //1-31
+  byte month =       10; //1-12
+  byte year  =       21; //0-99
+
+  Wire.beginTransmission(DS1307_ADDRESS);
+  Wire.write(zero); //stop Oscillator
+
+  Wire.write(decToBcd(second));
+  Wire.write(decToBcd(minute));
+  Wire.write(decToBcd(hour));
+  Wire.write(decToBcd(weekDay));
+  Wire.write(decToBcd(monthDay));
+  Wire.write(decToBcd(month));
+  Wire.write(decToBcd(year));
+
+  Wire.write(zero); //start 
+
+  Wire.endTransmission();
+
+}
+
+byte decToBcd(byte val){
+// Convert normal decimal numbers to binary coded decimal
+  return ( (val/10*16) + (val%10) );
+}
+
+byte bcdToDec(byte val)  {
+// Convert binary coded decimal to normal decimal numbers
+  return ( (val/16*10) + (val%16) );
+}
+
+String returnCompleteDate(){
+
+  // Reset the register pointer
+  Wire.beginTransmission(DS1307_ADDRESS);
+  Wire.write(zero);
+  Wire.endTransmission();
+
+  Wire.requestFrom(DS1307_ADDRESS, 7);
+
+  int second = bcdToDec(Wire.read());
+  int minute = bcdToDec(Wire.read());
+  int hour = bcdToDec(Wire.read() & 0b111111); //24 hour time
+  int weekDay = bcdToDec(Wire.read()); //0-6 -> sunday - Saturday
+  int monthDay = bcdToDec(Wire.read());
+  int month = bcdToDec(Wire.read());
+  int year = bcdToDec(Wire.read());
+
+  //print the date EG   3/1/11 23:59:59
+  String completeDate = String(monthDay) + "/" + String(month) + "/" + String(year) + " " + String(hour) + ":" + String(minute) + ":" + String(second);
+  
+  return completeDate;
+
+}
+
+String returnHourAndMinute(){
+
+  // Reset the register pointer
+  Wire.beginTransmission(DS1307_ADDRESS);
+  Wire.write(zero);
+  Wire.endTransmission();
+
+  Wire.requestFrom(DS1307_ADDRESS, 7);
+
+  int second = bcdToDec(Wire.read());
+  int minute = bcdToDec(Wire.read());
+  int hour = bcdToDec(Wire.read() & 0b111111); //24 hour time
+
+  //retorna a hora e  ominuto no seguinte formato 23:59
+  String hourAndMinute = String(hour) + ":" + String(minute);
+  
+  return hourAndMinute;
+
 }
