@@ -14,6 +14,10 @@
 - RTC SLC = pino digital 21
 - Motor step = pino digital 7
 - Motor dir = pino digital 8
+- LDR esquerda baixo = pino analógico A12;
+- LDR esquerda topo = pino analógico A15;
+- LDR direita baixo = pino analógico A13;
+- LDR direita topo = pino analógico A14;
 ## DHT11
 ---
 - Foi utilizado a biblioteca dht11 para facilitar a leitura da umidade e temperatura;
@@ -49,16 +53,8 @@
 ### Esquemático
 ![Esquemático sensor de corrente](./images/sensor_corrente.png )
 
-# Referências
-
-- dht11: https://create.arduino.cc/projecthub/arcaegecengiz/using-dht11-b0f365
-
-- Sensor de tensão: https://br-arduino.org/2015/06/voltimetro-com-arduino-como-montar-programar-e-calibrar.html
-
-- Sensor de corrente: https://www.electronicshub.org/interfacing-acs712-current-sensor-with-arduino/
-
 ## Motor
-- Será conectado aos pinos **digitais** 7 e 8
+- Será conectado aos pinos **digitais** 7 e 8;
 - É preciso testar para ver quantos pulsos será preciso para cada angulo, Os valores dos pulsos deverão ser colocados nas váriaveis:
 ````
 const int revolution15Degress = 100 // valores de exemplo
@@ -68,13 +64,17 @@ const int revolution50Degress = 300
 ````
 
 ## Armazenamento de dados
-- Foi utilizado o cartão SD para o armazenamento de dados
-- Foi utilizado o pino **digital** 4
+- Foi utilizado o cartão SD para o armazenamento de dados;
+- Foi utilizado o pino **digital** 4;
 
 ## RTC
-- Exclui a implementação utilizando a biblioteca de RTC
-- fiz uma nova implementação utilizando a biblioteca **Wire**  e tratando o valor recebido do RTC com comunicação I2C
+- Exclui a implementação utilizando a biblioteca de RTC;
+- fiz uma nova implementação utilizando a biblioteca **Wire**  e tratando o valor recebido do RTC com comunicação I2C;
 
+## Ajuste fino
+- Para instalar os LDR's é preciso "escolher" quais serão os 2 LDR's da direita e quais serão da esquerda pois o calculo do ajuste fino será comparando os LDR's da direita com os da esquerda;
+- No momento da instalação é necessário verificar a direção do motor, pois no código assumi que a direção **HIGH** é para a direita e a direção **LOW** é para a esquerda;
+ 
 # Referências
 
 - dht11: https://create.arduino.cc/projecthub/arcaegecengiz/using-dht11-b0f365

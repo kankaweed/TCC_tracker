@@ -29,16 +29,14 @@
 */
 
 /*
- * RTC
- * https://www.filipeflop.com/blog/relogio-rtc-ds1307-arduino/
- * https://github.com/filipeflop/DS1307
+ * CSV File
+ * https://scholarslab.lib.virginia.edu/blog/saving-arduino-sensor-data/
  * 
 */
 
 /*
- * CSV File
- * https://scholarslab.lib.virginia.edu/blog/saving-arduino-sensor-data/
- * 
+ * LDR's
+ * https://www.filipeflop.com/universidade/kit-maker-arduino/projeto-10-sensor-de-luz-ambiente/
 */
 #include <dht11.h>
 #include <Wire.h>
@@ -64,10 +62,10 @@ float relation = 12;
 
 int sensitivity = 66, adcValue= 0, offsetVoltage = 2500;
 
-const int revolution15Degress = 200; // Trocar valor para baseado na implementação
-const int revolution20Degress = 200; // Trocar valor para baseado na implementação
-const int revolution30Degress = 200; // Trocar valor para baseado na implementação
-const int revolution50Degress = 200; // Trocar valor para baseado na implementação
+const int revolution15Degress = 80000; // Trocar valor para baseado na implementação
+const int revolution20Degress = 80000; // Trocar valor para baseado na implementação
+const int revolution30Degress = 80000; // Trocar valor para baseado na implementação
+const int revolution50Degress = 80000; // Trocar valor para baseado na implementação
 const int revolutionBack = 10000000;
 
 const int stepPin = 7;
@@ -81,6 +79,16 @@ boolean safetyStop = false;
 const int sdPin = 4;
 
 File dataFile;
+
+int sensorLeftBot = A12;
+int sensorLeftTop = A15;
+int sensorRightBot = A13;
+int sensorRightTop = A14;
+
+int valueLeftBot = 0;
+int valueLeftTop = 0;
+int valueRightBot = 0;
+int valueRightTop = 0;
 
 dht11 DHT11;
 
@@ -115,7 +123,8 @@ void setup(){
   pinMode( dirPin, OUTPUT ) ;
   digitalWrite(stepPin, LOW);
   
- //setDateTime();
+  // descomentar a linha àbaixo somente se for necessário regravar o horário no RTC
+  //setDateTime();
 }
 
 void loop(){
@@ -129,11 +138,8 @@ void loop(){
   currentTracker = readCurrentSensor(A3);
   currentFixed = readCurrentSensor(A4);
   currentMotor = readCurrentSensor(A5);
-  
- String hourAndMinute = returnHourAndMinute();
- Serial.print("hora e minuto: ");
- Serial.println(hourAndMinute);
-  if(returnHourAndMinute() == "14:7"){
+
+  if(returnHourAndMinute() == "08:30"){
     turnMotor(revolution15Degress, HIGH);
   }
    if(returnHourAndMinute() == "10:00"){
@@ -152,7 +158,7 @@ void loop(){
     turnMotor(revolutionBack, LOW);
   }
   
-  Serial.print("Data: ");
+  /*Serial.print("Data: ");
   Serial.println(completeDate);
   Serial.print("Tensão tracker: ");
   Serial.print(voltageTracker);
@@ -172,10 +178,10 @@ void loop(){
   Serial.println("A");
   Serial.print("Corrente motor: ");
   Serial.print(currentMotor);
-  Serial.println("A");
+  Serial.println("A");*/
 
   saveDataToFile();
-  Serial.println();
+  //Serial.println();
   // aumentar delay para medições quando for instalado
   delay(5000);
 }
@@ -186,13 +192,13 @@ void readSensors(){
   humidity = DHT11.humidity;
   temperature = DHT11.temperature;
   
-  Serial.print("Umidade: ");
+  /*Serial.print("Umidade: ");
   Serial.print(humidity, 2);
   Serial.println(" %");
   
   Serial.print("Temperature: ");
   Serial.print(temperature, 2);
-  Serial.println(" ºC");
+  Serial.println(" ºC");*/
 }
 
 float readVoltage(uint8_t ioPin) {
@@ -217,19 +223,50 @@ float readCurrentSensor(uint8_t ioPin) {
 
 void turnMotor(int motorStep, volatile byte dir ) {
   digitalWrite(dirPin, dir);
+  int adjustDirection = 0;
 
-   for(int x = 0; x < motorStep; x++) {
+  for(int x = 0; x < motorStep; x++) {
     if(safetyStop){
       safetyStop = false;
       break;
     }
-        digitalWrite(stepPin, HIGH); 
-        delayMicroseconds(500); 
-        digitalWrite(stepPin, LOW); 
-        delayMicroseconds(500); 
-    }
-   digitalWrite(dirPin,!dir); 
-   digitalWrite(stepPin, LOW); 
+    digitalWrite(stepPin, HIGH); 
+    delayMicroseconds(500); 
+    digitalWrite(stepPin, LOW); 
+    delayMicroseconds(500); 
+  }
+  digitalWrite(dirPin,!dir); 
+  digitalWrite(stepPin, LOW);
+  
+  int valueLeftBot = analogRead(sensorLeftBot);
+  int valueLeftTop = analogRead(sensorLeftTop);
+  int valueRightBot = analogRead(sensorRightBot);
+  int valueRightTop = analogRead(sensorRightTop);
+
+  adjustDirection = calcLDRDifference();
+
+  if(adjustDirection == 1) {
+    turnMotor(1000, HIGH);
+  } else if(adjustDirection == 2) {
+    turnMotor(1000, LOW);
+  }
+}
+
+int calcLDRDifference() {
+  int averageRight = valueRightBot + valueRightTop;
+  int averageLeft = valueLeftBot + valueLeftTop;
+  
+
+  int difference = averageRight - averageLeft;
+
+  if(difference >= 100) {
+    return 1;
+  }
+  else if(difference <= -100) {
+    return 2;
+  }
+  
+  return 0;
 }
 
 void stopMotor() {
@@ -254,6 +291,7 @@ void saveDataToFile(){
 
 
 void setDateTime(){
+  // As seguinte variaveis servem para definir a data e o horário que será gravado no RTC
   byte second =      0; //0-59
   byte minute =      05; //0-59
   byte hour =        14; //0-23
@@ -280,18 +318,18 @@ void setDateTime(){
 }
 
 byte decToBcd(byte val){
-// Convert normal decimal numbers to binary coded decimal
+// Converte números decimais para BCD
   return ( (val/10*16) + (val%10) );
 }
 
 byte bcdToDec(byte val)  {
-// Convert binary coded decimal to normal decimal numbers
+// Converte BCD para números decimais
   return ( (val/16*10) + (val%16) );
 }
 
 String returnCompleteDate(){
 
-  // Reset the register pointer
+  // Reinicia o ponteiro do registrador
   Wire.beginTransmission(DS1307_ADDRESS);
   Wire.write(zero);
   Wire.endTransmission();
@@ -306,7 +344,7 @@ String returnCompleteDate(){
   int month = bcdToDec(Wire.read());
   int year = bcdToDec(Wire.read());
 
-  //print the date EG   3/1/11 23:59:59
+  //Concatena a data no seguinte formato: 30/04/1997 23:30:00
   String completeDate = String(monthDay) + "/" + String(month) + "/" + String(year) + " " + String(hour) + ":" + String(minute) + ":" + String(second);
   
   return completeDate;
@@ -315,7 +353,7 @@ String returnCompleteDate(){
 
 String returnHourAndMinute(){
 
-  // Reset the register pointer
+  // Reinicia o ponteiro do registrador
   Wire.beginTransmission(DS1307_ADDRESS);
   Wire.write(zero);
   Wire.endTransmission();
@@ -324,7 +362,7 @@ String returnHourAndMinute(){
 
   int second = bcdToDec(Wire.read());
   int minute = bcdToDec(Wire.read());
-  int hour = bcdToDec(Wire.read() & 0b111111); //24 hour time
+  int hour = bcdToDec(Wire.read() & 0b111111);
 
   //retorna a hora e  ominuto no seguinte formato 23:59
   String hourAndMinute = String(hour) + ":" + String(minute);
