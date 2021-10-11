@@ -82,3 +82,11 @@ const int revolution50Degress = 300
 - Sensor de tensão: https://br-arduino.org/2015/06/voltimetro-com-arduino-como-montar-programar-e-calibrar.html
 
 - Sensor de corrente: https://www.electronicshub.org/interfacing-acs712-current-sensor-with-arduino/
+
+- motor : https://www.robocore.net/tutoriais/controlando-motor-de-passo
+
+- Armazenamento de dados: https://scholarslab.lib.virginia.edu/blog/saving-arduino-sensor-data/
+
+- RTC: http://projectsfromtech.blogspot.com/2013/06/arduino-rtc-tinyrtc-v1-with-arduino.html
+
+- LDR: https://www.filipeflop.com/universidade/kit-maker-arduino/projeto-10-sensor-de-luz-ambiente/
