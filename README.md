@@ -72,6 +72,7 @@ const int revolution50Degress = 300
 - fiz uma nova implementação utilizando a biblioteca **Wire**  e tratando o valor recebido do RTC com comunicação I2C;
 
 ## Ajuste fino
+![Esquemático LDR](./images/LDR.png )
 - Para instalar os LDR's é preciso "escolher" quais serão os 2 LDR's da direita e quais serão da esquerda pois o calculo do ajuste fino será comparando os LDR's da direita com os da esquerda;
 - No momento da instalação é necessário verificar a direção do motor, pois no código assumi que a direção **HIGH** é para a direita e a direção **LOW** é para a esquerda;
  

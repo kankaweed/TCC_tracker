@@ -4,12 +4,6 @@
 */
 
 /* 
- *  Anemometro
- *  calc:https://webstorage.cienciaviva.pt/public/pt.cienciaviva.io/recursos/files/anemometro_4943648725bffc.pdf
- *  conections: http://blog.baudaeletronica.com.br/sensor-hall-com-arduino/
-*/
-
-/* 
  *  
  * Sensor de tensão
  * https://br-arduino.org/2015/06/voltimetro-com-arduino-como-montar-programar-e-calibrar.html
@@ -34,10 +28,16 @@
  * 
 */
 
+
+
+
+
+
 /*
  * LDR's
  * https://www.filipeflop.com/universidade/kit-maker-arduino/projeto-10-sensor-de-luz-ambiente/
 */
+
 #include <dht11.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -48,9 +48,9 @@
 #define TTracker A8
 #define TFixo A9
 #define TMotor A10
-#define DS1307_ADDRESS 0x68
+#define DS1307_ADDRESS 0x68 // pino hexademcima para RTC
 
-byte zero = 0x00; //workaround for issue #527
+byte zero = 0x00;
 
 float humidity, temperature, voltageTracker, voltageFixed, voltageMotor, currentTracker, currentFixed, currentMotor;
 
@@ -99,7 +99,7 @@ void setup(){
   if(!SD.begin(sdPin)) {
     Serial.println("Falha na inicialização!");
   }
-  Serial.println("Inicialização feita com sucesso!.");
+    Serial.println("Inicialização feita com sucesso!.");
   
   dataFile = SD.open("data.csv", FILE_WRITE);
   
@@ -123,8 +123,8 @@ void setup(){
   pinMode( dirPin, OUTPUT ) ;
   digitalWrite(stepPin, LOW);
   
-  // descomentar a linha àbaixo somente se for necessário regravar o horário no RTC
-  //setDateTime();
+  // descomentar a linha abaixo somente se for necessário regravar o horário no RTC
+  // setDateTime();
 }
 
 void loop(){
@@ -188,7 +188,7 @@ void loop(){
 
 void readSensors(){
   DHT11.read(DHT11PIN);
-  
+
   humidity = DHT11.humidity;
   temperature = DHT11.temperature;
   
@@ -293,15 +293,15 @@ void saveDataToFile(){
 void setDateTime(){
   // As seguinte variaveis servem para definir a data e o horário que será gravado no RTC
   byte second =      0; //0-59
-  byte minute =      05; //0-59
-  byte hour =        14; //0-23
-  byte weekDay =     7; //1-7
-  byte monthDay =    9; //1-31
+  byte minute =      06; //0-59
+  byte hour =        15; //0-23
+  byte weekDay =     1; //1-7
+  byte monthDay =    11; //1-31
   byte month =       10; //1-12
   byte year  =       21; //0-99
 
   Wire.beginTransmission(DS1307_ADDRESS);
-  Wire.write(zero); //stop Oscillator
+  Wire.write(zero); //parar Oscilador
 
   Wire.write(decToBcd(second));
   Wire.write(decToBcd(minute));
@@ -344,7 +344,7 @@ String returnCompleteDate(){
   int month = bcdToDec(Wire.read());
   int year = bcdToDec(Wire.read());
 
-  //Concatena a data no seguinte formato: 30/04/1997 23:30:00
+  //Concatena a data no seguinte formato: 30/04/97 23:30:00
   String completeDate = String(monthDay) + "/" + String(month) + "/" + String(year) + " " + String(hour) + ":" + String(minute) + ":" + String(second);
   
   return completeDate;
