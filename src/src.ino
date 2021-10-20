@@ -28,11 +28,6 @@
  * 
 */
 
-
-
-
-
-
 /*
  * LDR's
  * https://www.filipeflop.com/universidade/kit-maker-arduino/projeto-10-sensor-de-luz-ambiente/
@@ -62,14 +57,21 @@ float relation = 12;
 
 int sensitivity = 66, adcValue= 0, offsetVoltage = 2500;
 
-const int revolution15Degress = 80000; // Trocar valor para baseado na implementação
-const int revolution20Degress = 80000; // Trocar valor para baseado na implementação
-const int revolution30Degress = 80000; // Trocar valor para baseado na implementação
-const int revolution50Degress = 80000; // Trocar valor para baseado na implementação
-const int revolutionBack = 10000000;
+const unsigned long leaveLimitSwitch1 = 5000; // solta fim de curso
+const unsigned long revolution2Position = 128270; // posição 2
+const unsigned long revolution3Position = 168918; // posição 3
+const unsigned long revolution4Position = 54957; // posição 4
+const unsigned long revolution5Position = 49497; // posição 5
+const unsigned long revolution6Position = 113639; // posição 6
+const unsigned long revolution7Position = 81425; // posição 7
+const unsigned long arriveLimitSwitch2 = 10000; // bate fim de curso 2
+const unsigned long leaveLimitSwitch2 = 5569; // solta fim de curso 2
+const unsigned long restPosition = 256427; // posição de descanço
+const unsigned long arriveLimitSwitch1= 400000; // posição inicial
 
 const int stepPin = 7;
 const int dirPin = 8;
+const int enableMotor = 10;
 
 const int limitSwitch1 = 2;
 const int limitSwitch2 = 3;
@@ -104,7 +106,7 @@ void setup(){
   dataFile = SD.open("data.csv", FILE_WRITE);
   
   if (dataFile) {
-    dataFile.println("hora,umidade,temperatura,tensao_tracker,tensao_fixo,tensao_motor,corrente_tracker,corrente_fixed,corrente_motor");
+    dataFile.println("hora,umidade,temperatura,tensao_tracker,tensao_fixo,tensao_motor,corrente_tracker,corrente_fixed,corrente_motor,pot_tracker,pot_fixed");
     dataFile.close();
     Serial.println("Arquivo aberto com sucesso");
   } else {
@@ -122,9 +124,11 @@ void setup(){
   pinMode( stepPin, OUTPUT ) ;
   pinMode( dirPin, OUTPUT ) ;
   digitalWrite(stepPin, LOW);
-  
+  digitalWrite(enableMotor, HIGH);  
+
+  Serial.println("Digite os números das posições");
   // descomentar a linha abaixo somente se for necessário regravar o horário no RTC
-  // setDateTime();
+   //setDateTime();
 }
 
 void loop(){
@@ -139,23 +143,82 @@ void loop(){
   currentFixed = readCurrentSensor(A4);
   currentMotor = readCurrentSensor(A5);
 
-  if(returnHourAndMinute() == "08:30"){
-    turnMotor(revolution15Degress, HIGH);
+  // teste usando a Serial
+
+  /*if(Serial.available() > 0){
+    int numero = 10;
+    numero = Serial.read();
+    
+    Serial.print(numero);
+    
+    if(numero == '1'){
+      turnMotor(revolution1Position, HIGH);
+      numero = 10;
+    }
+    if(numero == '2'){
+      turnMotor(revolution2Position, HIGH);
+      numero = 10;
+    }
+    if(numero == '3'){
+      turnMotor(revolution3Position, HIGH);
+      numero = 10;
+    }
+    if(numero == '4'){
+      turnMotor(revolution4Position, HIGH);
+      numero = 10;
+    }
+    if(numero == '5'){
+      turnMotor(revolution5Position, HIGH);
+      numero = 10;
+    }
+    if(numero == '6'){
+      turnMotor(revolution6Position, HIGH);
+      numero = 10;
+    }
+    if(numero == '7'){
+      turnMotor(revolution7Position, HIGH);
+      numero = 10;
+    }
+    if(numero == '8'){
+      turnMotor(revolution8Position, LOW);
+      numero = 10;
+    }
+    if(numero == '9'){
+      turnMotor(revolution9Position, LOW);
+      numero = 10;
+    }
+    if(numero == '0'){
+      turnMotor(andaTudo, HIGH);
+      numero = 10;
+    }
+  }*/
+  
+  if(returnHourAndMinute() == "7:00"){
+    turnMotor(arriveLimitSwitch1, LOW);
+    turnMotor(leaveLimitSwitch1, HIGH);
   }
-   if(returnHourAndMinute() == "10:00"){
-    turnMotor(revolution15Degress, HIGH);
+  if(returnHourAndMinute() == "8:30"){
+   turnMotor(revolution2Position, HIGH);
   }
-   if(returnHourAndMinute() == "11:30"){
-    turnMotor(revolution20Degress, HIGH);
+  if(returnHourAndMinute() == "10:00"){
+     turnMotor(revolution3Position, HIGH);
   }
-   if(returnHourAndMinute() == "13:00"){
-    turnMotor(revolution50Degress, HIGH);
+  if(returnHourAndMinute() == "12:00"){
+    turnMotor(revolution4Position, HIGH);
   }
-   if(returnHourAndMinute() == "14:30"){
-    turnMotor(revolution30Degress, HIGH);
+  if(returnHourAndMinute() == "13:00"){
+   turnMotor(revolution5Position, HIGH);
   }
-   if(returnHourAndMinute() == "16:30"){
-    turnMotor(revolutionBack, LOW);
+  if(returnHourAndMinute() == "14:30"){
+     turnMotor(revolution6Position, HIGH);
+  }
+  if(returnHourAndMinute() == "16:00"){
+    turnMotor(revolution7Position, HIGH);
+  }
+  if(returnHourAndMinute() == "18:00"){
+    turnMotor(arriveLimitSwitch2, HIGH);
+    turnMotor(leaveLimitSwitch2, HIGH);
+    turnMotor(restPosition, LOW);
   }
   
   /*Serial.print("Data: ");
@@ -181,9 +244,9 @@ void loop(){
   Serial.println("A");*/
 
   saveDataToFile();
-  //Serial.println();
+  Serial.println();
   // aumentar delay para medições quando for instalado
-  delay(5000);
+  //delay(5000);
 }
 
 void readSensors(){
@@ -221,27 +284,42 @@ float readCurrentSensor(uint8_t ioPin) {
   return ((adcVoltage - offsetVoltage) / sensitivity);
 }
 
-void turnMotor(int motorStep, volatile byte dir ) {
+void turnMotor(unsigned long motorStep, volatile byte dir ) {
   digitalWrite(dirPin, dir);
+  digitalWrite(enableMotor, LOW);
   int adjustDirection = 0;
+  Serial.print("motorStep: ");
+  Serial.println(motorStep);
 
   for(int x = 0; x < motorStep; x++) {
     if(safetyStop){
       safetyStop = false;
+      /*digitalWrite(dirPin, !dir);
+      
+      for(int i = 0; i < limitSwitchStep; i++){
+        digitalWrite(stepPin, HIGH); 
+        delayMicroseconds(500); 
+        digitalWrite(stepPin, LOW); 
+        delayMicroseconds(500);   
+      }*/
+      
+      digitalWrite(enableMotor, HIGH);
+      Serial.print("steps: ");
+      Serial.println(x);
       break;
     }
     digitalWrite(stepPin, HIGH); 
     delayMicroseconds(500); 
     digitalWrite(stepPin, LOW); 
-    delayMicroseconds(500); 
+    delayMicroseconds(500);
   }
   digitalWrite(dirPin,!dir); 
   digitalWrite(stepPin, LOW);
   
-  int valueLeftBot = analogRead(sensorLeftBot);
-  int valueLeftTop = analogRead(sensorLeftTop);
-  int valueRightBot = analogRead(sensorRightBot);
-  int valueRightTop = analogRead(sensorRightTop);
+  valueLeftBot = analogRead(sensorLeftBot);
+  valueLeftTop = analogRead(sensorLeftTop);
+  valueRightBot = analogRead(sensorRightBot);
+  valueRightTop = analogRead(sensorRightTop);
 
   adjustDirection = calcLDRDifference();
 
@@ -250,6 +328,7 @@ void turnMotor(int motorStep, volatile byte dir ) {
   } else if(adjustDirection == 2) {
     turnMotor(1000, LOW);
   }
+  digitalWrite(enableMotor, HIGH);
 }
 
 int calcLDRDifference() {
@@ -271,9 +350,14 @@ int calcLDRDifference() {
 
 void stopMotor() {
   safetyStop = true;
+  Serial.println("Entrei na interrupção");
 }
 
 void saveDataToFile(){
+
+  float potTracker = voltageTracker * currentTracker;
+  float potFixed = voltageFixed * currentFixed;
+  
   dataFile = SD.open("data.csv", FILE_WRITE);
   dataFile.println( 
                     String(returnCompleteDate()) + "," +
@@ -284,7 +368,9 @@ void saveDataToFile(){
                     String(voltageMotor) + "," + 
                     String(currentTracker) + "," + 
                     String(currentFixed) + "," +
-                    String(currentMotor)
+                    String(currentMotor) + "," +
+                    String(potTracker) + "," +
+                    String(potFixed)
                   );
   dataFile.close();
 }
@@ -293,10 +379,10 @@ void saveDataToFile(){
 void setDateTime(){
   // As seguinte variaveis servem para definir a data e o horário que será gravado no RTC
   byte second =      0; //0-59
-  byte minute =      06; //0-59
+  byte minute =      33; //0-59
   byte hour =        15; //0-23
   byte weekDay =     1; //1-7
-  byte monthDay =    11; //1-31
+  byte monthDay =    17; //1-31
   byte month =       10; //1-12
   byte year  =       21; //0-99
 
