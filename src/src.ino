@@ -57,7 +57,7 @@ float relation = 12;
 
 int sensitivity = 66, adcValue= 0, offsetVoltage = 2500;
 
-const unsigned long leaveLimitSwitch1 = 5000; // solta fim de curso
+const unsigned long leaveLimitSwitch1 = 10000; // solta fim de curso
 const unsigned long revolution2Position = 128270; // posição 2
 const unsigned long revolution3Position = 168918; // posição 3
 const unsigned long revolution4Position = 54957; // posição 4
@@ -65,7 +65,7 @@ const unsigned long revolution5Position = 49497; // posição 5
 const unsigned long revolution6Position = 113639; // posição 6
 const unsigned long revolution7Position = 81425; // posição 7
 const unsigned long arriveLimitSwitch2 = 10000; // bate fim de curso 2
-const unsigned long leaveLimitSwitch2 = 5569; // solta fim de curso 2
+const unsigned long leaveLimitSwitch2 = 10000; // solta fim de curso 2
 const unsigned long restPosition = 256427; // posição de descanço
 const unsigned long arriveLimitSwitch1= 400000; // posição inicial
 
@@ -195,6 +195,7 @@ void loop(){
   
   if(returnHourAndMinute() == "7:00"){
     turnMotor(arriveLimitSwitch1, LOW);
+    delay(1000);
     turnMotor(leaveLimitSwitch1, HIGH);
   }
   if(returnHourAndMinute() == "8:30"){
@@ -217,7 +218,9 @@ void loop(){
   }
   if(returnHourAndMinute() == "18:00"){
     turnMotor(arriveLimitSwitch2, HIGH);
+    delay(1000);
     turnMotor(leaveLimitSwitch2, HIGH);
+    delay(1000);
     turnMotor(restPosition, LOW);
   }
   
@@ -354,25 +357,26 @@ void stopMotor() {
 }
 
 void saveDataToFile(){
-
-  float potTracker = voltageTracker * currentTracker;
-  float potFixed = voltageFixed * currentFixed;
-  
-  dataFile = SD.open("data.csv", FILE_WRITE);
-  dataFile.println( 
-                    String(returnCompleteDate()) + "," +
-                    String(humidity) + "," + 
-                    String(temperature) + "," + 
-                    String(voltageTracker) + "," +
-                    String(voltageFixed) + "," + 
-                    String(voltageMotor) + "," + 
-                    String(currentTracker) + "," + 
-                    String(currentFixed) + "," +
-                    String(currentMotor) + "," +
-                    String(potTracker) + "," +
-                    String(potFixed)
-                  );
-  dataFile.close();
+  if (returnMinute() == "00" || returnMinute() == "15" || returnMinute() == "30" || returnMinute() == "45"){
+    float potTracker = voltageTracker * currentTracker;
+    float potFixed = voltageFixed * currentFixed;
+    
+    dataFile = SD.open("data.csv", FILE_WRITE);
+    dataFile.println( 
+                      String(returnCompleteDate()) + "," +
+                      String(humidity) + "," + 
+                      String(temperature) + "," + 
+                      String(voltageTracker) + "," +
+                      String(voltageFixed) + "," + 
+                      String(voltageMotor) + "," + 
+                      String(currentTracker) + "," + 
+                      String(currentFixed) + "," +
+                      String(currentMotor) + "," +
+                      String(potTracker) + "," +
+                      String(potFixed)
+                    );
+    dataFile.close();
+  }
 }
 
 
@@ -454,5 +458,24 @@ String returnHourAndMinute(){
   String hourAndMinute = String(hour) + ":" + String(minute);
   
   return hourAndMinute;
+
+}
+
+String returnMinute(){
+
+  // Reinicia o ponteiro do registrador
+  Wire.beginTransmission(DS1307_ADDRESS);
+  Wire.write(zero);
+  Wire.endTransmission();
+
+  Wire.requestFrom(DS1307_ADDRESS, 7);
+
+  int second = bcdToDec(Wire.read());
+  int minute = bcdToDec(Wire.read());
+
+  //retorna a hora e  ominuto no seguinte formato 23:59
+  String onlyMinute = String(minute);
+  
+  return onlyMinute;
 
 }
