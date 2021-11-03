@@ -360,6 +360,7 @@ void saveDataToFile(){
   if (returnMinute() == "00" || returnMinute() == "15" || returnMinute() == "30" || returnMinute() == "45"){
     float potTracker = voltageTracker * currentTracker;
     float potFixed = voltageFixed * currentFixed;
+    float potMotor = voltageMotor * currentMotor;
     
     dataFile = SD.open("data.csv", FILE_WRITE);
     dataFile.println( 
@@ -373,7 +374,8 @@ void saveDataToFile(){
                       String(currentFixed) + "," +
                       String(currentMotor) + "," +
                       String(potTracker) + "," +
-                      String(potFixed)
+                      String(potFixed) + "," +
+                      String(potMotor)
                     );
     dataFile.close();
   }
